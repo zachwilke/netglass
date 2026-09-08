@@ -25,7 +25,7 @@ struct ReportSnapshot: Equatable, Sendable {
     }
 
     var transcript: String {
-        lines.map(\ .text).joined(separator: "\n")
+        lines.map(\.text).joined(separator: "\n")
     }
 
     static var defaultHostOSNote: String {
@@ -178,7 +178,7 @@ enum ReportFormatter {
     }
 
     static func csvTable(_ snapshot: ReportSnapshot) -> CSVTable {
-        let texts = snapshot.lines.map(\ .text)
+        let texts = snapshot.lines.map(\.text)
         switch snapshot.tool {
         case .ping:
             if let rows = parsePing(texts) {
