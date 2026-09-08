@@ -54,7 +54,7 @@ If a tool is missing, the panel says so and shows the brew formula. It never fai
 
 - The sidebar picks a tool. The inspector is the form; the lower pane is a streaming console.
 - **⌘R** runs, **⌘.** stops, **⌘K** clears output.
-- Copy or save the log from the console. The argv preview is copyable.
+- Copy or save the log from the console. **Export ▾** (console and toolbar) saves Text, Markdown, or CSV, copies a ChatGPT/Claude-ready payload (**Copy for AI**, ⌘⇧C), or copies raw output. The argv preview is copyable.
 - Nmap defaults are tame: host-up (`-sn`) or TCP connect (`-sT -T3`) on a short port list.
 
 ## Auto-updates (Sparkle 2)
@@ -80,6 +80,8 @@ Tools launch with `Process.arguments` (argv only). Host, URL, port, filter, and 
 ```bash
 xcrun swift test
 ```
+
+Formatter coverage (Markdown structure, CSV parsers + `line_number,text` fallback, AI copy header) lives in `Tests/NetglassCoreTests/ReportExportTests.swift`.
 
 ## Layout
 

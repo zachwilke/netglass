@@ -11,6 +11,8 @@ Sidebar / form  →  AppModel.makeSpec()  →  CommandSpec
         ToolSession + ProcessRunner (Foundation.Process)
                          ↓
               stdout / stderr line stream → ConsoleView
+                         ↓
+              ReportFormatter (txt / md / csv / AI copy)
 ```
 
 ## Process runner
@@ -62,6 +64,10 @@ Release enables Hardened Runtime. Library validation stays on; Netglass does not
 `GlassChrome` uses `ultraThinMaterial`, hairline gradients, and `NSVisualEffectView` so Sonoma and Sequoia already look like frosted glass. When the project is compiled with a macOS 26 SDK (Swift 6.2+), `glassEffect` is applied behind `#if compiler(>=6.2)` and `#available(macOS 26.0, *)`.
 
 Each tool keeps its own `ToolSession` so switching sidebar items does not wipe output. The console keeps a 5,000-line ring buffer and sanitizes ANSI/control characters.
+
+## Export
+
+`ReportFormatter` renders the current buffer plus session metadata. It never re-runs a tool. Saves go through `NSSavePanel` and `InputValidator.userWritePath`. CSV parses ping timing lines, dig answer/authority/additional sections, and nmap port rows when those patterns are present; otherwise it writes `line_number,text`.
 
 ## What this is not
 
