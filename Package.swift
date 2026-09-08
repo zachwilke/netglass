@@ -17,7 +17,8 @@ let package = Package(
                 "Services/ArgumentPolicy.swift",
                 "Services/BinaryLocator.swift",
                 "Services/ConsoleText.swift",
-                "Services/InputValidator.swift"
+                "Services/InputValidator.swift",
+                "Services/ReportExport.swift"
             ]
         ),
         .testTarget(
