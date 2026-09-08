@@ -25,7 +25,7 @@ enum ValidationError: LocalizedError, Equatable, Sendable {
         case .empty(let field):
             return "\(field) is required."
         case .invalidHost(let value):
-            return “\u201c\(value)\u201d is not a safe host, address, or name."
+            return "“\(value)” is not a safe host, address, or name."
         case .invalidPort:
             return "Port must be an integer from 1 to 65535."
         case .invalidCount(let field):
@@ -41,7 +41,7 @@ enum ValidationError: LocalizedError, Equatable, Sendable {
         case .credentialsInURL:
             return "Leave usernames and passwords out of the URL. Netglass will not put credentials on the process list."
         case .disallowedArgument(let token):
-            return "Argument \u201c\(token)\u201d is blocked. Netglass only forwards a small, tame flag set."
+            return "Argument “\(token)” is blocked. Netglass only forwards a small, tame flag set."
         case .tooManyExtraArguments:
             return "Too many extra arguments. Keep the advanced line short."
         case .massScanPrefix:
@@ -49,7 +49,7 @@ enum ValidationError: LocalizedError, Equatable, Sendable {
         case .invalidHeader:
             return "Headers must look like Name: value, one per line, without control characters."
         case .secretHeader(let name):
-            return "Refusing to send \u201c\(name)\u201d \u2014 it would appear on the local process list. Use Terminal for authenticated calls."
+            return "Refusing to send “\(name)” — it would appear on the local process list. Use Terminal for authenticated calls."
         case .invalidRecordType:
             return "Choose a DNS record type from the list."
         case .payloadTooLarge:
