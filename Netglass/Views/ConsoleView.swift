@@ -1,6 +1,5 @@
 import AppKit
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct CommandPreview: View {
     var text: String
@@ -43,18 +42,21 @@ struct ConsoleView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+                if let notice = session.exportNotice {
+                    Text(notice)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .transition(.opacity)
+                }
                 Toggle("Follow", isOn: $session.autoScroll)
                     .toggleStyle(.switch)
                     .controlSize(.mini)
-                Button("Copy") { copy() }
-                    .buttonStyle(.borderless)
-                    .disabled(session.lines.isEmpty)
-                Button("Save…") { save() }
-                    .buttonStyle(.borderless)
-                    .disabled(session.lines.isEmpty)
+                ExportMenu(session: session)
+                    .controlSize(.small)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 7)
+            .animation(.easeOut(duration: 0.2), value: session.exportNotice)
 
             Divider()
 
@@ -106,24 +108,4 @@ struct ConsoleView: View {
         }
     }
 
-    private func copy() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(session.transcript(), forType: .string)
-    }
-
-    private func save() {
-        let panel = NSSavePanel()
-        panel.canCreateDirectories = true
-        panel.allowedContentTypes = [.plainText]
-        let stamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "")
-        panel.nameFieldStringValue = "\(session.tool.rawValue)-\(stamp).log"
-        if panel.runModal() == .OK, let url = panel.url {
-            do {
-                let safe = try InputValidator.userWritePath(url)
-                try session.transcript().write(to: safe, atomically: true, encoding: .utf8)
-            } catch {
-                session.presentError(error.localizedDescription)
-            }
-        }
-    }
 }

@@ -28,6 +28,8 @@ struct InspectorToolbar: ToolbarContent {
             StatusPill(session: model.currentSession)
         }
         ToolbarItemGroup(placement: .primaryAction) {
+            ExportMenu(session: model.currentSession)
+
             Button("Clear", systemImage: "trash") {
                 model.currentSession.clear()
             }
