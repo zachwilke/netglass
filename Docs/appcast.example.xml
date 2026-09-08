@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>Netglass</title>
+    <link>https://github.com/zachwilke/netglass/releases/latest/download/appcast.xml</link>
+    <description>Netglass updates</description>
+    <language>en</language>
+    <item>
+      <title>Version 1.0.0</title>
+      <pubDate>Tue, 08 Sep 2026 00:00:00 +0000</pubDate>
+      <sparkle:version>1</sparkle:version>
+      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <description><![CDATA[<p>First public cut of Netglass.</p>]]></description>
+      <enclosure
+        url="https://github.com/zachwilke/netglass/releases/download/1.0.0/Netglass.zip"
+        length="0"
+        type="application/octet-stream"
+        sparkle:edSignature="REPLACE_WITH_SIGN_UPDATE_OUTPUT" />
+    </item>
+  </channel>
+</rss>
