@@ -11,15 +11,19 @@ final class ToolSession {
     var state: RunState = .idle
     var lastPreview = ""
     var startedAt: Date?
+    var finishedAt: Date?
     var autoScroll = true
     var truncated = false
     var sawPrivilegeError = false
     var cancelRequested = false
+    var exportNotice: String?
 
     @ObservationIgnored
     private let runner = ProcessRunner()
     @ObservationIgnored
     private var nextLineID: UInt64 = 1
+    @ObservationIgnored
+    private var noticeWork: DispatchWorkItem?
 
     init(tool: ToolKind) {
         self.tool = tool
@@ -31,6 +35,7 @@ final class ToolSession {
         guard !isRunning else { return }
         lastPreview = preview ?? spec.preview
         startedAt = Date()
+        finishedAt = nil
         cancelRequested = false
         sawPrivilegeError = false
         appendSystem("Started \(lastPreview)")
@@ -66,6 +71,35 @@ final class ToolSession {
         lines.map(\.text).joined(separator: "\n")
     }
 
+    func makeSnapshot(now: Date = Date(), hostOSNote: String = ReportSnapshot.defaultHostOSNote) -> ReportSnapshot {
+        ReportSnapshot(
+            tool: tool,
+            commandPreview: lastPreview,
+            startedAt: startedAt,
+            capturedAt: now,
+            finishedAt: finishedAt,
+            status: state.label,
+            exitCode: state.exitCode,
+            truncated: truncated,
+            hostOSNote: hostOSNote,
+            lines: lines.map { ReportLine(text: $0.text, stream: $0.stream.rawValue) }
+        )
+    }
+
+    func flashExportNotice(_ text: String) {
+        exportNotice = text
+        noticeWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            Task { @MainActor in
+                if self?.exportNotice == text {
+                    self?.exportNotice = nil
+                }
+            }
+        }
+        noticeWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8, execute: work)
+    }
+
     private func handle(_ event: ProcessEvent) {
         switch event {
         case .started(let pid):
@@ -73,6 +107,7 @@ final class ToolSession {
         case .lines(let batch):
             append(batch)
         case .exited(let code):
+            finishedAt = Date()
             if cancelRequested {
                 state = .cancelled
                 appendSystem("Stopped.")
@@ -85,6 +120,7 @@ final class ToolSession {
             }
             cancelRequested = false
         case .failed(let message):
+            finishedAt = Date()
             state = .errored(message)
             appendSystem(message)
         }

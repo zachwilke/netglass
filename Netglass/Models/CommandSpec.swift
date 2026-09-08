@@ -94,4 +94,13 @@ enum RunState: Equatable, Sendable {
         case .errored: return "Error"
         }
     }
+
+    var exitCode: Int32? {
+        switch self {
+        case .succeeded(let code), .failed(let code):
+            return code
+        default:
+            return nil
+        }
+    }
 }

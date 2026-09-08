@@ -34,6 +34,20 @@ struct NetglassApp: App {
                 Button("Clear Output") { model.currentSession.clear() }
                     .keyboardShortcut("k")
             }
+            CommandMenu("Export") {
+                Button("Save Text…") { ReportShare.save(model.currentSession, format: .text) }
+                    .disabled(model.currentSession.lines.isEmpty)
+                Button("Save Markdown…") { ReportShare.save(model.currentSession, format: .markdown) }
+                    .disabled(model.currentSession.lines.isEmpty)
+                Button("Save CSV…") { ReportShare.save(model.currentSession, format: .csv) }
+                    .disabled(model.currentSession.lines.isEmpty)
+                Divider()
+                Button("Copy for AI") { ReportShare.copyForAI(model.currentSession) }
+                    .keyboardShortcut("c", modifiers: [.command, .shift])
+                    .disabled(model.currentSession.lines.isEmpty)
+                Button("Copy Raw") { ReportShare.copyRaw(model.currentSession) }
+                    .disabled(model.currentSession.lines.isEmpty)
+            }
         }
 
         Settings {
