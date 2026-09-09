@@ -38,7 +38,7 @@ final class ToolSession {
         finishedAt = nil
         cancelRequested = false
         sawPrivilegeError = false
-        appendSystem("Started \(lastPreview)")
+        appendNotice("Started \(lastPreview)")
         runner.start(spec: spec) { [weak self] event in
             Task { @MainActor in
                 self?.handle(event)
@@ -49,7 +49,7 @@ final class ToolSession {
     func stop() {
         guard isRunning else { return }
         cancelRequested = true
-        appendSystem("Stopping…")
+        appendNotice("Stopping…")
         runner.cancel()
     }
 
@@ -110,13 +110,13 @@ final class ToolSession {
             finishedAt = Date()
             if cancelRequested {
                 state = .cancelled
-                appendSystem("Stopped.")
+                appendNotice("Stopped.")
             } else if code == 0 {
                 state = .succeeded(code: code)
-                appendSystem("Finished with status 0.")
+                appendNotice("Finished with status 0.")
             } else {
                 state = .failed(code: code)
-                appendSystem("Finished with status \(code).")
+                appendNotice("Finished with status \(code).")
             }
             cancelRequested = false
         case .failed(let message):
@@ -128,6 +128,10 @@ final class ToolSession {
 
     private func appendSystem(_ text: String) {
         append([StreamedLine(stream: .system, text: text)])
+    }
+
+    private func appendNotice(_ text: String) {
+        append([StreamedLine(stream: .notice, text: text)])
     }
 
     private func append(_ batch: [StreamedLine]) {

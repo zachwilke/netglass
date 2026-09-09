@@ -137,7 +137,7 @@ final class ProcessRunner: @unchecked Sendable {
             extractLines(from: data, into: &stdoutBuffer, stream: .stdout)
         case .stderr:
             extractLines(from: data, into: &stderrBuffer, stream: .stderr)
-        case .system:
+        case .system, .notice:
             break
         }
     }

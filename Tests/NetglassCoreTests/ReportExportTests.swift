@@ -14,21 +14,19 @@ final class ReportExportTests: XCTestCase {
         )
         let md = ReportFormatter.markdown(snapshot)
         XCTAssertTrue(md.hasPrefix("# Ping\n"))
-        XCTAssertTrue(md.contains("| When | 2026-09-08T22:00:00Z |"))
-        XCTAssertTrue(md.contains("| Command | `/sbin/ping -c 3 1.1.1.1` |"))
-        XCTAssertTrue(md.contains("| Status | Finished · 0 |"))
-        XCTAssertTrue(md.contains("| Duration | 2.0 s |"))
-        XCTAssertTrue(md.contains("| Truncated | no |"))
+        XCTAssertTrue(md.contains("`/sbin/ping -c 3 1.1.1.1`"))
+        XCTAssertTrue(md.contains("Finished · 0 (2.0 s) — 2026-09-08T22:00:00Z"))
         XCTAssertTrue(md.contains("```text\n64 bytes from 1.1.1.1: icmp_seq=0 ttl=57 time=12.3 ms\n```\n"))
-        XCTAssertFalse(md.contains("Ring buffer"))
+        // An untruncated run says nothing about truncation at all.
+        XCTAssertFalse(md.lowercased().contains("truncat"))
+        XCTAssertFalse(md.contains("lines."))
     }
 
     func testMarkdownNotesTruncation() {
         var snapshot = makeSnapshot(tool: .whois, lines: ["whois example.com"])
         snapshot.truncated = true
         let md = ReportFormatter.markdown(snapshot)
-        XCTAssertTrue(md.contains("yes — last 5000 lines"))
-        XCTAssertTrue(md.contains("Ring buffer kept the newest 5,000 lines."))
+        XCTAssertTrue(md.contains("Last 5000 lines."))
     }
 
     func testPlainTextIncludesArgvAndTranscript() {
@@ -38,9 +36,11 @@ final class ReportExportTests: XCTestCase {
             status: "Finished · 0",
             lines: ["HTTP/2 200"]
         ))
-        XCTAssertTrue(text.contains("Tool:      Headers"))
-        XCTAssertTrue(text.contains("Command:   /usr/bin/curl -I https://example.com"))
+        XCTAssertTrue(text.hasPrefix("Headers\n"))
+        XCTAssertTrue(text.contains("Command: /usr/bin/curl -I https://example.com"))
+        XCTAssertTrue(text.contains("Status:  Finished · 0 (2.0 s)"))
         XCTAssertTrue(text.contains("HTTP/2 200"))
+        XCTAssertFalse(text.contains("Netglass report"))
     }
 
     func testCSVFallbackIsLineNumberAndText() {
@@ -163,16 +163,33 @@ final class ReportExportTests: XCTestCase {
             lines: ["; ANSWER", "example.com. 300 IN A 93.184.216.34"]
         )
         let payload = ReportFormatter.aiCopy(snapshot)
-        XCTAssertTrue(payload.contains("You are helping diagnose a local network issue."))
-        XCTAssertTrue(payload.contains("ran a local CLI tool as argv (no shell)"))
-        XCTAssertTrue(payload.contains("Do not invent packet captures"))
-        XCTAssertTrue(payload.contains("- Tool: Dig"))
-        XCTAssertTrue(payload.contains("- Host OS: macOS (test)"))
-        XCTAssertTrue(payload.contains("- Command (argv): /opt/homebrew/bin/dig example.com A"))
-        XCTAssertTrue(payload.contains("- Status: Finished · 0"))
+        XCTAssertTrue(payload.hasPrefix("Netglass ran a local network CLI tool as argv (no shell) on macOS (test). "))
+        XCTAssertTrue(payload.contains("suggest the next safe diagnostic step"))
+        XCTAssertTrue(payload.contains("Tool: Dig"))
+        XCTAssertTrue(payload.contains("Command: /opt/homebrew/bin/dig example.com A"))
+        XCTAssertTrue(payload.contains("Status: Finished · 0 (2.0 s)"))
         XCTAssertTrue(payload.contains("```\n; ANSWER\nexample.com. 300 IN A 93.184.216.34\n```\n"))
         XCTAssertFalse(payload.lowercased().contains("authorization"))
         XCTAssertFalse(payload.contains("AWS_"))
+    }
+
+    func testReportsDropProgressNoticesButKeepErrors() {
+        var snapshot = makeSnapshot(tool: .whois, lines: [])
+        snapshot.lines = [
+            ReportLine(text: "Started /sbin/ping -c 1 1.1.1.1", stream: "notice"),
+            ReportLine(text: "64 bytes from 1.1.1.1: icmp_seq=0 ttl=57 time=12.3 ms", stream: "stdout"),
+            ReportLine(text: "ping: sendto: No route to host", stream: "stderr"),
+            ReportLine(text: "Could not launch /sbin/ping.", stream: "system"),
+            ReportLine(text: "Finished with status 1.", stream: "notice"),
+        ]
+        let text = ReportFormatter.plainText(snapshot)
+        XCTAssertFalse(text.contains("Started /sbin/ping"))
+        XCTAssertFalse(text.contains("Finished with status 1."))
+        XCTAssertTrue(text.contains("64 bytes from 1.1.1.1"))
+        XCTAssertTrue(text.contains("ping: sendto: No route to host"))
+        XCTAssertTrue(text.contains("Could not launch /sbin/ping."))
+        // The CSV fallback reads the same filtered lines, so numbering skips them too.
+        XCTAssertEqual(ReportFormatter.csvTable(snapshot).rows.first, ["1", "64 bytes from 1.1.1.1: icmp_seq=0 ttl=57 time=12.3 ms"])
     }
 
     func testSuggestedFilenameUsesToolAndUTCStamp() {
@@ -185,8 +202,8 @@ final class ReportExportTests: XCTestCase {
 
     func testMissingCommandPreviewIsExplicit() {
         let snapshot = makeSnapshot(tool: .traceroute, preview: "", lines: ["hop"])
-        XCTAssertTrue(ReportFormatter.plainText(snapshot).contains("Command:   (not recorded)"))
-        XCTAssertTrue(ReportFormatter.aiCopy(snapshot).contains("Command (argv): (not recorded)"))
+        XCTAssertTrue(ReportFormatter.plainText(snapshot).contains("Command: (not recorded)"))
+        XCTAssertTrue(ReportFormatter.aiCopy(snapshot).contains("Command: (not recorded)"))
     }
 
     private func makeSnapshot(

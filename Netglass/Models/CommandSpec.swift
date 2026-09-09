@@ -55,7 +55,11 @@ struct OutputLine: Identifiable, Hashable, Sendable {
     enum Stream: String, Sendable {
         case stdout
         case stderr
+        /// Netglass speaking, not the tool: errors and anything else worth keeping.
         case system
+        /// Netglass progress chatter that restates the run header. Shown live,
+        /// left out of reports.
+        case notice
     }
 
     let id: UInt64

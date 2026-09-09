@@ -24,12 +24,19 @@ struct ReportSnapshot: Equatable, Sendable {
         return (finishedAt ?? capturedAt).timeIntervalSince(startedAt)
     }
 
+    /// Netglass's own progress lines only restate the header a report already
+    /// carries, so reports drop them. Error text arrives on `system` and stays.
+    var reportLines: [ReportLine] {
+        lines.filter { $0.stream != OutputLine.Stream.notice.rawValue }
+    }
+
     var transcript: String {
-        lines.map(\.text).joined(separator: "\n")
+        reportLines.map(\.text).joined(separator: "\n")
     }
 
     static var defaultHostOSNote: String {
-        "macOS \(ProcessInfo.processInfo.operatingSystemVersionString) (local Netglass diagnostic; output was not uploaded)"
+        let version = ProcessInfo.processInfo.operatingSystemVersion
+        return "macOS \(version.majorVersion).\(version.minorVersion).\(version.patchVersion)"
     }
 }
 
@@ -56,6 +63,9 @@ enum ReportFileFormat: String, CaseIterable, Sendable {
 }
 
 enum ReportFormatter {
+    /// Mirrors ToolSession.maxLines, which lives outside this module.
+    static let maxLines = 5_000
+
     static let isoFormatter: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
@@ -79,17 +89,16 @@ enum ReportFormatter {
     }
 
     static func plainText(_ snapshot: ReportSnapshot) -> String {
-        var lines: [String] = [
-            "Netglass report",
-            "===============",
-            "Tool:      \(snapshot.tool.title)",
-            "When:      \(iso(snapshot.startedAt ?? snapshot.capturedAt))",
-            "Command:   \(command(snapshot))",
-            "Status:    \(snapshot.status)",
-            "Duration:  \(durationText(snapshot))",
-            "Truncated: \(snapshot.truncated ? "yes (last \(5_000) lines)" : "no")",
-            "",
+        var lines = [
+            snapshot.tool.title,
+            "Command: \(command(snapshot))",
+            "Status:  \(statusText(snapshot))",
+            "When:    \(iso(snapshot.startedAt ?? snapshot.capturedAt))",
         ]
+        if snapshot.truncated {
+            lines.append("Output:  last \(maxLines) lines")
+        }
+        lines.append("")
         if !snapshot.transcript.isEmpty {
             lines.append(snapshot.transcript)
             if !snapshot.transcript.hasSuffix("\n") {
@@ -100,22 +109,11 @@ enum ReportFormatter {
     }
 
     static func markdown(_ snapshot: ReportSnapshot) -> String {
-        var body = """
-        # \(snapshot.tool.title)
-
-        | Field | Value |
-        | --- | --- |
-        | When | \(iso(snapshot.startedAt ?? snapshot.capturedAt)) |
-        | Command | `\(escapeTable(command(snapshot)))` |
-        | Status | \(escapeTable(snapshot.status)) |
-        | Duration | \(durationText(snapshot)) |
-        | Truncated | \(snapshot.truncated ? "yes — last 5000 lines" : "no") |
-
-        ## Output
-
-        """
+        var body = "# \(snapshot.tool.title)\n\n"
+        body += "`\(escapeInline(command(snapshot)))`\n\n"
+        body += "\(statusText(snapshot)) — \(iso(snapshot.startedAt ?? snapshot.capturedAt))\n\n"
         if snapshot.truncated {
-            body += "_Ring buffer kept the newest 5,000 lines._\n\n"
+            body += "Last \(maxLines) lines.\n\n"
         }
         body += "```text\n"
         body += snapshot.transcript
@@ -138,22 +136,18 @@ enum ReportFormatter {
     /// Clipboard payload for pasting into ChatGPT, Claude, or Cursor.
     static func aiCopy(_ snapshot: ReportSnapshot) -> String {
         var body = """
-        You are helping diagnose a local network issue. The block below is output from Netglass, a macOS GUI that ran a local CLI tool as argv (no shell). Treat hostnames as potentially sensitive. Do not assume credentials, cookies, or Authorization headers are present — Netglass refuses those.
-
-        Please: (1) summarize what the tool reported, (2) flag anything unusual or failed, (3) suggest the next *safe* diagnostic step. Do not invent packet captures, scan results, or secrets.
-
-        ## Context
-        - Tool: \(snapshot.tool.title)
-        - When: \(iso(snapshot.startedAt ?? snapshot.capturedAt))
-        - Host OS: \(snapshot.hostOSNote)
-        - Command (argv): \(command(snapshot))
-        - Status: \(snapshot.status)
-        - Duration: \(durationText(snapshot))
-        - Output window: \(snapshot.truncated ? "truncated to the last 5000 lines" : "complete buffered output")
-
-        ## Output
-        ```
+        Netglass ran a local network CLI tool as argv (no shell) on \(snapshot.hostOSNote). \
+        Summarize what it found, flag anything that failed or looks wrong, and suggest the \
+        next safe diagnostic step. Don't invent output.
         """
+        body += "\n\nTool: \(snapshot.tool.title)"
+        body += "\nCommand: \(command(snapshot))"
+        body += "\nStatus: \(statusText(snapshot))"
+        body += "\nWhen: \(iso(snapshot.startedAt ?? snapshot.capturedAt))"
+        if snapshot.truncated {
+            body += "\n\nOnly the last \(maxLines) lines are shown."
+        }
+        body += "\n\n```\n"
         body += snapshot.transcript
         if !snapshot.transcript.hasSuffix("\n") {
             body += "\n"
@@ -178,7 +172,7 @@ enum ReportFormatter {
     }
 
     static func csvTable(_ snapshot: ReportSnapshot) -> CSVTable {
-        let texts = snapshot.lines.map(\.text)
+        let texts = snapshot.reportLines.map(\.text)
         switch snapshot.tool {
         case .ping:
             if let rows = parsePing(texts) {
@@ -326,9 +320,9 @@ enum ReportFormatter {
         return preview.isEmpty ? "(not recorded)" : preview
     }
 
-    static func durationText(_ snapshot: ReportSnapshot) -> String {
+    static func durationText(_ snapshot: ReportSnapshot) -> String? {
         guard let duration = snapshot.duration, duration >= 0, duration.isFinite else {
-            return "—"
+            return nil
         }
         if duration < 60 {
             return String(format: "%.1f s", duration)
@@ -342,9 +336,15 @@ enum ReportFormatter {
         isoFormatter.string(from: date)
     }
 
-    private static func escapeTable(_ value: String) -> String {
+    /// `Finished · 0 (2.0 s)`, dropping the duration when it is unknown.
+    private static func statusText(_ snapshot: ReportSnapshot) -> String {
+        guard let duration = durationText(snapshot) else { return snapshot.status }
+        return "\(snapshot.status) (\(duration))"
+    }
+
+    private static func escapeInline(_ value: String) -> String {
         value
-            .replacingOccurrences(of: "|", with: "\\|")
+            .replacingOccurrences(of: "`", with: "'")
             .replacingOccurrences(of: "\n", with: " ")
     }
 }
