@@ -17,7 +17,7 @@ final class UpdateController {
 
     static let feedURL = URL(string: "https://github.com/zachwilke/netglass/releases/latest/download/appcast.xml")!
 
-    static var publicKeyConfigured: Bool {
+    nonisolated static var publicKeyConfigured: Bool {
         guard let key = Bundle.main.object(forInfoDictionaryKey: "SUPublicEDKey") as? String else {
             return false
         }

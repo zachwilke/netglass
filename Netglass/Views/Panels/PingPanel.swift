@@ -29,7 +29,7 @@ struct PingPanel: View {
                         VStack(alignment: .leading, spacing: 6) {
                             FieldLabel("Interval", hint: "Under 1s usually needs root")
                             Slider(value: $form.interval, in: 0.2...5, step: 0.1)
-                            Text("\(form.interval, specifier: \"%.1f\") s")
+                            Text("\(form.interval, specifier: "%.1f") s")
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)
                         }

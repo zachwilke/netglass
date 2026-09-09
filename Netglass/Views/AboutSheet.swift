@@ -95,7 +95,7 @@ struct SettingsView: View {
                     }
                     LabeledContent("Public key") {
                         Text(UpdateController.publicKeyConfigured ? "Configured" : "Placeholder — updates disabled")
-                            .foregroundStyle(UpdateController.publicKeyConfigured ? .secondary : .orange)
+                            .foregroundStyle(UpdateController.publicKeyConfigured ? Color.secondary : Color.orange)
                     }
                     if UpdateController.publicKeyConfigured {
                         Button("Check for Updates…") {

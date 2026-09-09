@@ -5,7 +5,7 @@ enum ConsoleText: Sendable {
     static let maxPartialBytes = 65_536
 
     private static let ansi = try! NSRegularExpression(
-        pattern: "\\u001B\\[[0-9;?=]*[ -/]*[@-~]|\\u001B\\][^]*\\u0007|\\u001B[@-Z\\\\-_]"
+        pattern: "\\u001B\\[[0-9;?=]*[ -/]*[@-~]|\\u001B\\][^\\u0007]*\\u0007|\\u001B[@-Z\\\\-_]"
     )
 
     static func sanitize(_ raw: String) -> String {
