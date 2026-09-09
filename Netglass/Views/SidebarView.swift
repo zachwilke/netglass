@@ -24,6 +24,7 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
         .searchable(text: $query, placement: .sidebar, prompt: "Filter tools")
         .navigationSplitViewColumnWidth(min: 200, ideal: 232, max: 280)
     }

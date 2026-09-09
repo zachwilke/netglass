@@ -63,6 +63,7 @@ struct DetailWorkspace: View {
                     .padding(20)
                     .frame(maxWidth: 760, alignment: .leading)
             }
+            .scrollContentBackground(.hidden)
             .frame(minHeight: 220)
 
             VStack(spacing: 0) {

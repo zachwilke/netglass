@@ -38,8 +38,7 @@ struct GlassCard<Content: View>: View {
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(.quaternary.opacity(0.35))
+                GlassShape(shape: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
     }
 }
@@ -78,10 +77,29 @@ struct WindowConfigurator: NSViewRepresentable {
         guard let window else { return }
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
-        window.backgroundColor = .windowBackgroundColor
+        window.backgroundColor = .clear
         window.isOpaque = false
         window.styleMask.insert(.fullSizeContentView)
         window.titleVisibility = .visible
+        installBackdrop(in: window)
+    }
+
+    /// The backdrop belongs at the bottom of the window's own content view, so
+    /// it covers the full frame including the toolbar strip and the edges.
+    /// Hung off a SwiftUI `.background` it only covers laid-out content, and
+    /// anything outside that becomes a see-through gap rather than frosted.
+    private func installBackdrop(in window: NSWindow) {
+        guard let contentView = window.contentView else { return }
+        let id = NSUserInterfaceItemIdentifier("netglass.backdrop")
+        if contentView.subviews.contains(where: { $0.identifier == id }) { return }
+        let backdrop = NSVisualEffectView()
+        backdrop.identifier = id
+        backdrop.material = .underWindowBackground
+        backdrop.blendingMode = .behindWindow
+        backdrop.state = .active
+        backdrop.frame = contentView.bounds
+        backdrop.autoresizingMask = [.width, .height]
+        contentView.addSubview(backdrop, positioned: .below, relativeTo: nil)
     }
 }
 
